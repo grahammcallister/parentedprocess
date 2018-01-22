@@ -19,7 +19,7 @@ namespace ParentProcess.Demo
             InitializeComponent();
             DataContext = this;
             Running = false;
-            _manager = new ParentedProcessManager(@"C:\Windows\notepad.exe", "Notepad");
+            _manager = new ParentedProcessManager(@"C:\Windows\notepad.exe", "Notepad", "Notepad");
             _manager.ProcessMainWindowHandleFoundEvent += ManagerOnProcessMainWindowHandleFoundEvent;
         }
 

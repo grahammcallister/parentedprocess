@@ -8,5 +8,7 @@ namespace ParentProcess
         public Process Process { get; set; }
         public IntPtr MainWindowHandle { get; set; }
         public ProcessStartInfo ProcessStartInfo { get; set; }
+
+        
     }
 }

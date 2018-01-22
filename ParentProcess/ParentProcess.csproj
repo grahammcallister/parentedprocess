@@ -32,6 +32,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -43,7 +44,9 @@
     <Compile Include="ParentedProcessInfo.cs" />
     <Compile Include="ParentedProcessManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Win32ChildprocessesWrapper.cs" />
     <Compile Include="Win32EnumWindowWrapper.cs" />
+    <Compile Include="Win32WindowTextWrapper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

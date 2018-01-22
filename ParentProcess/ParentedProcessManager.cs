@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace ParentProcess
 {
@@ -10,7 +11,7 @@ namespace ParentProcess
         private BackgroundWorker _processWorker;
         private BackgroundWorker _shutdownWorker;
 
-        public ParentedProcessManager(string processToParentFilename, string windowCaption)
+        public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
         {
             if (string.IsNullOrEmpty(processToParentFilename))
                 throw new ArgumentNullException(nameof(processToParentFilename));
@@ -19,18 +20,22 @@ namespace ParentProcess
                     $"Unable to parent process for file not found {processToParentFilename}", processToParentFilename);
             ProcessToParentFilename = processToParentFilename;
             ProcessToParentWindowCaption = windowCaption;
+            ProcessToParentFriendlyName = friendlyName;
             InitialiseProcessBackgroundWorker();
             InitialiseProcessShutdownBackgroundWorker();
         }
 
-        public ParentedProcessManager(string processToParentFilename, string windowCaption,
-            ProcessStartInfo processStartInfo) : this(processToParentFilename, windowCaption)
+        
+
+        public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName,
+            ProcessStartInfo processStartInfo) : this(processToParentFilename, windowCaption, friendlyName)
         {
             ProcessStartInfo = processStartInfo;
         }
 
         public string ProcessToParentFilename { get; set; }
         public string ProcessToParentWindowCaption { get; set; }
+        public string ProcessToParentFriendlyName { get; set; }
 
         public ProcessStartInfo ProcessStartInfo { get; set; }
 
@@ -61,6 +66,7 @@ namespace ParentProcess
                 {
                     FileName = ProcessToParentFilename,
                     WindowStyle = ProcessWindowStyle.Minimized
+                    
                 };
             }
             else
@@ -91,17 +97,24 @@ namespace ParentProcess
             {
                 while (ParentedProcessInfo.MainWindowHandle == IntPtr.Zero && !ParentedProcessInfo.Process.HasExited)
                 {
-                    var hnd = Win32EnumWindowWrapper.FindWindowsWithProcessId(ParentedProcessInfo.Process.Id.ToString());
-                    foreach (var hwnd in hnd)
+                    var processes = Win32ChildprocessesWrapper.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
+                    if (processes.Count() == 1)
                     {
-                        var caption = Win32EnumWindowWrapper.GetCaptionOfWindow(hwnd);
-                        if (!string.IsNullOrEmpty(caption) && caption.Contains(ProcessToParentWindowCaption))
+                        processes = Process.GetProcessesByName(ProcessToParentFriendlyName);
+                    }
+                    var processesWithWindows = processes.Where(x => x.MainWindowHandle != IntPtr.Zero);
+                    foreach (var process in processesWithWindows)
+                    {
+                        var parent = ParentProcessUtilities.GetParentProcess(process.Id);
+                        if (parent != null && parent.Id == ParentedProcessInfo.Process.Id)
                         {
-                            ParentedProcessInfo.MainWindowHandle = hwnd;
+                            // Found you!
+                            ParentedProcessInfo.MainWindowHandle = process.MainWindowHandle;
                             OnProcessMainWindowHandleFoundEvent();
                             return;
                         }
                     }
+
                 }
             }
         }
@@ -119,8 +132,30 @@ namespace ParentProcess
             {
                 if (ParentedProcessInfo.Process != null)
                 {
-                    ParentedProcessInfo.Process.Kill();
-                    ParentedProcessInfo.Process.WaitForExit();
+                    var processes = Process.GetProcessesByName(ProcessToParentFriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
+                    foreach (var process in processes)
+                    {
+                        if (!process.HasExited && !ParentedProcessInfo.Process.HasExited)
+                        {
+                            if (ParentProcessUtilities.GetParentProcess(process.Id)?.Id ==
+                                ParentedProcessInfo.Process.Id)
+                            {
+                                try
+                                {
+                                    process.Kill();
+                                    process.WaitForExit();
+                                }
+                                catch
+                                {
+                                }
+                            }
+                        }
+                    }
+                    if (!ParentedProcessInfo.Process.HasExited)
+                    {
+                        ParentedProcessInfo.Process.Kill();
+                        ParentedProcessInfo.Process.WaitForExit();
+                    }
                 }
             }
         }
