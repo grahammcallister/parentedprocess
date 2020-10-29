@@ -41,12 +41,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Delegates.cs" />
+    <Compile Include="IParentedProcessManager.cs" />
     <Compile Include="ParentedProcessInfo.cs" />
     <Compile Include="ParentedProcessManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Win32ChildprocessesWrapper.cs" />
-    <Compile Include="Win32EnumWindowWrapper.cs" />
-    <Compile Include="Win32WindowTextWrapper.cs" />
+    <Compile Include="Win32Api\FindParentProcess.cs" />
+    <Compile Include="Win32Api\EnumerateProcessWindows.cs" />
+    <Compile Include="Win32Api\WindowCaptionText.cs" />
+    <Compile Include="Win32Api\Win32Wrapper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

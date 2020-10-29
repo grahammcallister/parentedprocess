@@ -7,4 +7,6 @@ namespace ParentProcess
     public delegate void ProcessMainWindowHandleFound(EventArgs args);
 
     public delegate void ProcessStopped(EventArgs args);
+
+    public delegate void ProcessUnhandledException(object sender, UnhandledExceptionEventArgs args);
 }

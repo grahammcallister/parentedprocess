@@ -1,15 +1,22 @@
-﻿using System;
+﻿using ParentProcess.Win32Api;
+using System;
 using System.ComponentModel;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
 namespace ParentProcess
 {
-    public class ParentedProcessManager
+    public class ParentedProcessManager : IParentedProcessManager
     {
         private BackgroundWorker _processWorker;
         private BackgroundWorker _shutdownWorker;
+        private BackgroundWorker _findMainWindowHandleWorker;
+
+        public ParentedProcessManager(ParentedProcessInfo parentedProcessInfo) : this(parentedProcessInfo.ProcessToParentFilename, parentedProcessInfo.WindowCaption, parentedProcessInfo.FriendlyName)
+        {
+        }
 
         public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
         {
@@ -23,14 +30,7 @@ namespace ParentProcess
             ProcessToParentFriendlyName = friendlyName;
             InitialiseProcessBackgroundWorker();
             InitialiseProcessShutdownBackgroundWorker();
-        }
-
-        
-
-        public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName,
-            ProcessStartInfo processStartInfo) : this(processToParentFilename, windowCaption, friendlyName)
-        {
-            ProcessStartInfo = processStartInfo;
+            InitialiseFindMainWindowHandleBackgroundWorker();
         }
 
         public string ProcessToParentFilename { get; set; }
@@ -39,7 +39,12 @@ namespace ParentProcess
 
         public ProcessStartInfo ProcessStartInfo { get; set; }
 
-        public bool IsRunning { get; private set; }
+        public bool IsRunning { 
+            get {
+                return (!ParentedProcessInfo?.Process?.HasExited ?? false);
+            }
+            private set { }
+        }
 
         private void InitialiseProcessBackgroundWorker()
         {
@@ -55,6 +60,26 @@ namespace ParentProcess
             _shutdownWorker = new BackgroundWorker();
             _shutdownWorker.WorkerSupportsCancellation = false;
             _shutdownWorker.DoWork += BackgroundStopProcess;
+        }
+
+        private void InitialiseFindMainWindowHandleBackgroundWorker()
+        {
+            _findMainWindowHandleWorker = new BackgroundWorker();
+            _findMainWindowHandleWorker.WorkerSupportsCancellation = false;
+            _findMainWindowHandleWorker.DoWork += BackgroundFindMainWindowHandle;
+            _findMainWindowHandleWorker.RunWorkerCompleted += BackgroundFindMainWindowHandleCompleted;
+        }
+
+        private void BackgroundFindMainWindowHandleCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e?.Result != null)
+            {
+                var result = (Boolean)e.Result;
+                if (result)
+                {
+                    OnProcessMainWindowHandleFoundEvent();
+                }
+            }
         }
 
         private void BackgroundStartProcess(object sender, DoWorkEventArgs doWorkEventArgs)
@@ -73,31 +98,35 @@ namespace ParentProcess
             {
                 ParentedProcessInfo.ProcessStartInfo = ProcessStartInfo;
             }
-            ParentedProcessInfo.Process = new Process {StartInfo = ParentedProcessInfo.ProcessStartInfo, EnableRaisingEvents = true};
+            
+            ParentedProcessInfo.Process = new Process {
+                StartInfo = ParentedProcessInfo.ProcessStartInfo,
+                EnableRaisingEvents = true
+            };
+
             ParentedProcessInfo.Process.Exited += ProcessOnExited;
             var result = ParentedProcessInfo.Process.Start();
-            ParentedProcessInfo.Process.WaitForInputIdle(5000);
-            ParentedProcessInfo.Process.Refresh();
             if (result)
             {
-                GetMainWindowHandle();
+                //GetMainWindowHandle();
                 IsRunning = true;
                 OnProcessStarted();
             }
         }
 
-        private void GetMainWindowHandle()
+        private void BackgroundFindMainWindowHandle(object sender, DoWorkEventArgs doWorkEventArgs)
         {
             if (ParentedProcessInfo.Process.MainWindowHandle != IntPtr.Zero)
             {
                 ParentedProcessInfo.MainWindowHandle = ParentedProcessInfo.Process.MainWindowHandle;
-                OnProcessMainWindowHandleFoundEvent();
+                doWorkEventArgs.Result = true;
+                return;
             }
             else
             {
                 while (ParentedProcessInfo.MainWindowHandle == IntPtr.Zero && !ParentedProcessInfo.Process.HasExited)
                 {
-                    var processes = Win32ChildprocessesWrapper.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
+                    var processes = FindParentProcess.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
                     if (processes.Count() == 1)
                     {
                         processes = Process.GetProcessesByName(ProcessToParentFriendlyName);
@@ -105,12 +134,12 @@ namespace ParentProcess
                     var processesWithWindows = processes.Where(x => x.MainWindowHandle != IntPtr.Zero);
                     foreach (var process in processesWithWindows)
                     {
-                        var parent = ParentProcessUtilities.GetParentProcess(process.Id);
+                        var parent = FindParentProcess.GetParentProcess(process.Id);
                         if (parent != null && parent.Id == ParentedProcessInfo.Process.Id)
                         {
                             // Found you!
                             ParentedProcessInfo.MainWindowHandle = process.MainWindowHandle;
-                            OnProcessMainWindowHandleFoundEvent();
+                            doWorkEventArgs.Result = true;
                             return;
                         }
                     }
@@ -122,6 +151,15 @@ namespace ParentProcess
         private void ProcessOnExited(object sender, EventArgs eventArgs)
         {
             IsRunning = false;
+            var senderProcess = sender as Process;
+            if(senderProcess != null)
+            {
+                if(senderProcess.ExitCode != 0)
+                {
+                    OnProcessUnhandledExceptionEvent(new UnhandledExceptionEventArgs(new Exception($"Process exited with exit code {senderProcess.ExitCode}"), true));
+                    return;
+                }
+            }
             OnProcessStoppedEvent();
         }
 
@@ -137,7 +175,7 @@ namespace ParentProcess
                     {
                         if (!process.HasExited && !ParentedProcessInfo.Process.HasExited)
                         {
-                            if (ParentProcessUtilities.GetParentProcess(process.Id)?.Id ==
+                            if (FindParentProcess.GetParentProcess(process.Id)?.Id ==
                                 ParentedProcessInfo.Process.Id)
                             {
                                 try
@@ -176,11 +214,20 @@ namespace ParentProcess
             }
         }
 
+        public void FindMainWindowHandle()
+        {
+            if (IsRunning)
+            {
+                _findMainWindowHandleWorker.RunWorkerAsync();
+            }
+        }
+
         public ParentedProcessInfo ParentedProcessInfo { get; private set; }
 
         public event ProcessStarted ProcessStartedEvent;
         public event ProcessStopped ProcessStoppedEvent;
         public event ProcessMainWindowHandleFound ProcessMainWindowHandleFoundEvent;
+        public event ProcessUnhandledException ProcessUnhandledExceptionEvent;
 
         protected virtual void OnProcessStarted()
         {
@@ -195,6 +242,11 @@ namespace ParentProcess
         protected virtual void OnProcessMainWindowHandleFoundEvent()
         {
             ProcessMainWindowHandleFoundEvent?.Invoke(EventArgs.Empty);
+        }
+
+        protected virtual void OnProcessUnhandledExceptionEvent(UnhandledExceptionEventArgs args)
+        {
+            ProcessUnhandledExceptionEvent?.Invoke(this, args);
         }
     }
 }
