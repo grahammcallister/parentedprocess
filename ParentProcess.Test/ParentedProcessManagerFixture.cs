@@ -43,12 +43,42 @@ namespace ParentProcess.Test
             // Act
             manager.StartProcess();
 
-            Thread.Sleep(5000);
+            Thread.Sleep(6000);
 
             // Assert
 
             Assert.That(_unhandledException, Is.Not.Null);
             Assert.That(manager.IsRunning, Is.False);
+        }
+
+        private bool _wasStopped = false;
+
+        [TestCase]
+        public void ParentProcessManager_WhenKillingApplication_FiresStoppedEvent()
+        {
+            // Arrange
+            var path = @"C:\Windows\System32\Notepad.exe";
+            var manager = new ParentedProcessManager(path, "Notepad will be killed", "Notepad will be killed");
+            manager.ProcessStoppedEvent += Manager_ProcessStoppedEvent;
+
+            // Act
+            manager.StartProcess();
+
+            Thread.Sleep(1000);
+
+            manager.StopProcess();
+
+            Thread.Sleep(1000);
+
+            // Assert
+
+            Assert.That(_wasStopped, Is.True);
+            Assert.That(manager.IsRunning, Is.False);
+        }
+
+        private void Manager_ProcessStoppedEvent(EventArgs args)
+        {
+            _wasStopped = true;
         }
 
         private void Manager_ProcessUnhandledExceptionEvent(object sender, UnhandledExceptionEventArgs args)

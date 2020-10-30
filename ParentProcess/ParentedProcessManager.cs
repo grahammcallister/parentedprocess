@@ -13,11 +13,7 @@ namespace ParentProcess
         private BackgroundWorker _processWorker;
         private BackgroundWorker _shutdownWorker;
         private BackgroundWorker _findMainWindowHandleWorker;
-
-        public ParentedProcessManager(ParentedProcessInfo parentedProcessInfo) : this(parentedProcessInfo.ProcessToParentFilename, parentedProcessInfo.WindowCaption, parentedProcessInfo.FriendlyName)
-        {
-        }
-
+        
         public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
         {
             if (string.IsNullOrEmpty(processToParentFilename))
@@ -26,17 +22,18 @@ namespace ParentProcess
                 throw new FileNotFoundException(
                     $"Unable to parent process for file not found {processToParentFilename}", processToParentFilename);
             ProcessToParentFilename = processToParentFilename;
-            ProcessToParentWindowCaption = windowCaption;
-            ProcessToParentFriendlyName = friendlyName;
+            WindowCaption = windowCaption;
+            FriendlyName = friendlyName;
+
             InitialiseProcessBackgroundWorker();
             InitialiseProcessShutdownBackgroundWorker();
             InitialiseFindMainWindowHandleBackgroundWorker();
         }
 
         public string ProcessToParentFilename { get; set; }
-        public string ProcessToParentWindowCaption { get; set; }
-        public string ProcessToParentFriendlyName { get; set; }
-
+        public string WindowCaption { get; set; }
+        public string FriendlyName { get; set; }
+        public ParentedProcessInfo ParentedProcessInfo { get; set; }
         public ProcessStartInfo ProcessStartInfo { get; set; }
 
         public bool IsRunning { 
@@ -129,7 +126,7 @@ namespace ParentProcess
                     var processes = FindParentProcess.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
                     if (processes.Count() == 1)
                     {
-                        processes = Process.GetProcessesByName(ProcessToParentFriendlyName);
+                        processes = Process.GetProcessesByName(FriendlyName);
                     }
                     var processesWithWindows = processes.Where(x => x.MainWindowHandle != IntPtr.Zero);
                     foreach (var process in processesWithWindows)
@@ -154,7 +151,7 @@ namespace ParentProcess
             var senderProcess = sender as Process;
             if(senderProcess != null)
             {
-                if(senderProcess.ExitCode != 0)
+                if(senderProcess.ExitCode != 0 && senderProcess.ExitCode != -1)
                 {
                     OnProcessUnhandledExceptionEvent(new UnhandledExceptionEventArgs(new Exception($"Process exited with exit code {senderProcess.ExitCode}"), true));
                     return;
@@ -170,7 +167,7 @@ namespace ParentProcess
             {
                 if (ParentedProcessInfo.Process != null)
                 {
-                    var processes = Process.GetProcessesByName(ProcessToParentFriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
+                    var processes = Process.GetProcessesByName(FriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
                     foreach (var process in processes)
                     {
                         if (!process.HasExited && !ParentedProcessInfo.Process.HasExited)
@@ -221,8 +218,6 @@ namespace ParentProcess
                 _findMainWindowHandleWorker.RunWorkerAsync();
             }
         }
-
-        public ParentedProcessInfo ParentedProcessInfo { get; private set; }
 
         public event ProcessStarted ProcessStartedEvent;
         public event ProcessStopped ProcessStoppedEvent;

@@ -13,6 +13,10 @@ namespace ParentProcess
 
         ParentedProcessInfo ParentedProcessInfo { get; }
 
+        string ProcessToParentFilename { get; set; }
+        string WindowCaption { get; set; }
+        string FriendlyName { get; set; }
+
         event ProcessStarted ProcessStartedEvent;
         event ProcessStopped ProcessStoppedEvent;
         event ProcessMainWindowHandleFound ProcessMainWindowHandleFoundEvent;

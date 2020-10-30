@@ -5,16 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ParentProcess.Demo"
         mc:Ignorable="d"
-        Title="Process Demo" Height="450" Width="800"
+        Title="Process Demo" Height="768" Width="1024"
         Closed="MainWindow_OnClosed">
     <Grid>
-        <StackPanel VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Width="120" Height="23" Click="StartClicked" Margin="5" Name="StartButton">Start</Button>
-            <Button Width="120" Height="23" Click="StopClicked" Margin="5" Name="StopButton">Stop</Button>
-            </StackPanel>
-            <CheckBox IsEnabled="False" HorizontalAlignment="Center" IsChecked="{Binding Path=Running}">Running</CheckBox>
-            <Label Content="{Binding Path=WindowHandle}" HorizontalAlignment="Center"></Label>
+        <StackPanel>
+        <local:ParentProcessDemoUserControl x:Name="DemoControl1"></local:ParentProcessDemoUserControl>
+        <local:ParentProcessDemoUserControl x:Name="DemoControl2"></local:ParentProcessDemoUserControl>
         </StackPanel>
     </Grid>
 </Window>
