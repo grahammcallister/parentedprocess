@@ -21,7 +21,7 @@ namespace ParentProcess.Demo
         {
             SetNotRunningUi();
             PathToExecutable = @"C:\Windows\notepad.exe";
-            _manager = new ParentedProcessManager(PathToExecutable, "App", "App");
+            _manager = new ParentedProcessManager(PathToExecutable, "Notepad", "Notepad");
             _manager.ProcessMainWindowHandleFoundEvent += ManagerOnProcessMainWindowHandleFoundEvent;
             _manager.ProcessStartedEvent += ManagerOnProcessStartedEvent;
             _manager.ProcessStoppedEvent += ManagerOnProcessStoppedEvent;

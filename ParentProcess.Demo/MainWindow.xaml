@@ -8,9 +8,13 @@
         Title="Process Demo" Height="768" Width="1024"
         Closed="MainWindow_OnClosed">
     <Grid>
-        <StackPanel>
+        <TabControl>
+            <TabItem Header="Application 1">
         <local:ParentProcessDemoUserControl x:Name="DemoControl1"></local:ParentProcessDemoUserControl>
-        <local:ParentProcessDemoUserControl x:Name="DemoControl2"></local:ParentProcessDemoUserControl>
-        </StackPanel>
+            </TabItem>
+            <TabItem Header="Application 2">
+            <local:ParentProcessDemoUserControl x:Name="DemoControl2"></local:ParentProcessDemoUserControl>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
