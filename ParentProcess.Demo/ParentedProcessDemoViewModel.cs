@@ -4,35 +4,44 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Forms;
 
 namespace ParentProcess.Demo
 {
     public class ParentedProcessDemoViewModel : INotifyPropertyChanged
     {
-        private readonly ParentedProcessManager _manager;
+        private readonly ProcessManager _manager;
         private bool _running;
         private string _pathToExecutable;
         private IntPtr _windowHandle;
         public DelegateCommand StartCommand { get; set; }
         public DelegateCommand StopCommand { get; set; }
         public DelegateCommand GetWindowHandleCommand { get; set; }
+        public DelegateCommand PlaceInParentCommand { get; set; }
 
         public ParentedProcessDemoViewModel()
         {
             SetNotRunningUi();
             PathToExecutable = @"C:\Windows\notepad.exe";
-            _manager = new ParentedProcessManager(PathToExecutable, "Notepad", "Notepad");
+            _manager = new ProcessManager(PathToExecutable, "Notepad", "Notepad");
             _manager.ProcessMainWindowHandleFoundEvent += ManagerOnProcessMainWindowHandleFoundEvent;
             _manager.ProcessStartedEvent += ManagerOnProcessStartedEvent;
             _manager.ProcessStoppedEvent += ManagerOnProcessStoppedEvent;
+            _manager.ProcessUnhandledExceptionEvent += ManagerOnProcessUnhandledExceptionEvent;
             StartCommand = new DelegateCommand(Start);
             StopCommand = new DelegateCommand(Close);
             GetWindowHandleCommand = new DelegateCommand(GetWindowHandle);
+            PlaceInParentCommand = new DelegateCommand(PlaceInParent);
+        }
+
+        private void ManagerOnProcessUnhandledExceptionEvent(object sender, UnhandledExceptionEventArgs args)
+        {
+            Close();
         }
 
         public void Close()
         {
-            if (_manager != null && _manager.IsRunning)
+            if (_manager != null && _manager.HasExited)
             {
                 _manager.StopProcess();
             }
@@ -41,11 +50,25 @@ namespace ParentProcess.Demo
         public void Start()
         {
             if (_manager != null) { 
-                if (!_manager.IsRunning)
+                if (!_manager.HasExited)
                 {
-                    _manager.ProcessToParentFilename = PathToExecutable;
+                    _manager.ProcessFileName = PathToExecutable;
                     _manager.StartProcess();
                 }
+            }
+        }
+
+        public void PlaceInParent()
+        {
+            if(ParentControl != null)
+            {
+                var control = ParentControl as System.Windows.Forms.Integration.WindowsFormsHost;
+                ParentedProcessManager.ParentWindowHandle = control.Handle;
+                if (ParentedProcessManager.ParentWindowHandle != IntPtr.Zero)
+                {
+                    ParentedProcessManager.PlaceInParent(control);
+                }
+
             }
         }
 
@@ -53,7 +76,7 @@ namespace ParentProcess.Demo
         {
             if (_manager != null)
             {
-                if (_manager.IsRunning)
+                if (_manager.HasExited)
                 {
                     _manager.FindMainWindowHandle();
                 }
@@ -95,7 +118,9 @@ namespace ParentProcess.Demo
             }
         }
 
-        public ParentedProcessManager ParentedProcessManager { get => _manager; }
+        public object ParentControl { get; set; }
+
+        public ProcessManager ParentedProcessManager { get => _manager; }
 
         private void SetNotRunningUi()
         {
@@ -114,12 +139,12 @@ namespace ParentProcess.Demo
 
         private void ManagerOnProcessStoppedEvent(EventArgs args)
         {
-            Application.Current?.Dispatcher?.Invoke(new Action(SetNotRunningUi));
+            System.Windows.Application.Current?.Dispatcher?.Invoke(new Action(SetNotRunningUi));
         }
 
         private void ManagerOnProcessStartedEvent(EventArgs args)
         {
-            Application.Current?.Dispatcher?.Invoke(new Action(SetRunningUi));
+            System.Windows.Application.Current?.Dispatcher?.Invoke(new Action(SetRunningUi));
         }
 
         private void OnPropertyChanged(string propertyName)

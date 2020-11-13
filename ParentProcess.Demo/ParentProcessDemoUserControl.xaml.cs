@@ -11,6 +11,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace ParentProcess.Demo
 {
@@ -24,6 +26,10 @@ namespace ParentProcess.Demo
             InitializeComponent();
             _viewmodel = new ParentedProcessDemoViewModel();
             DataContext = _viewmodel;
+            ViewModel.ParentControl = ParentControl;
+            var panel = new System.Windows.Forms.Panel();
+            panel.Dock = System.Windows.Forms.DockStyle.Fill;
+            ParentControl.Child = panel;
         }
 
         private ParentedProcessDemoViewModel _viewmodel;

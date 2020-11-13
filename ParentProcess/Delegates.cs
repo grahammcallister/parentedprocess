@@ -9,4 +9,6 @@ namespace ParentProcess
     public delegate void ProcessStopped(EventArgs args);
 
     public delegate void ProcessUnhandledException(object sender, UnhandledExceptionEventArgs args);
+
+    public delegate void WatchdogEvent(EventArgs args);
 }

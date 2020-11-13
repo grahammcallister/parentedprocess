@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParentProcess.Demo", "Paren
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParentProcess.Test.FaultingAppTest", "ParentProcess.Test.FaultingAppTest\ParentProcess.Test.FaultingAppTest.csproj", "{E5862374-E33A-4AB8-9913-F9B79CF79C9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParentProcess.Test.SlowClosingAppTest", "ParentProcess.Test.SlowClosingAppTest\ParentProcess.Test.SlowClosingAppTest.csproj", "{19A4A7B8-B2F5-4BB3-A929-0439678CB606}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{E5862374-E33A-4AB8-9913-F9B79CF79C9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5862374-E33A-4AB8-9913-F9B79CF79C9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5862374-E33A-4AB8-9913-F9B79CF79C9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19A4A7B8-B2F5-4BB3-A929-0439678CB606}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19A4A7B8-B2F5-4BB3-A929-0439678CB606}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19A4A7B8-B2F5-4BB3-A929-0439678CB606}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19A4A7B8-B2F5-4BB3-A929-0439678CB606}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

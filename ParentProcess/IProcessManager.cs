@@ -5,17 +5,20 @@ using System.Text;
 
 namespace ParentProcess
 {
-    public interface IParentedProcessManager
+    public interface IProcessManager
     {
         void StartProcess();
         void StopProcess();
         void FindMainWindowHandle();
+        void PlaceInParent(object parent);
 
-        ParentedProcessInfo ParentedProcessInfo { get; }
+        ProcessInfo ParentedProcessInfo { get; }
 
-        string ProcessToParentFilename { get; set; }
+        string ProcessFileName { get; set; }
         string WindowCaption { get; set; }
         string FriendlyName { get; set; }
+
+        IntPtr ParentWindowHandle { get; set; }
 
         event ProcessStarted ProcessStartedEvent;
         event ProcessStopped ProcessStoppedEvent;

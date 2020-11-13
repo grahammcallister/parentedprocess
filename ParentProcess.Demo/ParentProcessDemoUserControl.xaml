@@ -14,13 +14,17 @@
                 <Button Width="120" Height="23" Command="{Binding StartCommand}" Margin="5" Name="StartButton" IsEnabled="{Binding Path=CanStart}">Start</Button>
                 <Button Width="120" Height="23" Command="{Binding StopCommand}" Margin="5" Name="StopButton" IsEnabled="{Binding Path=CanStop}">Stop</Button>
             </StackPanel>
-            <Button Width="120" Height="23" Command="{Binding GetWindowHandleCommand}" Margin="5" Name="WindowHandleButton" IsEnabled="{Binding Path=CanGetWindowHandle}" DockPanel.Dock="Bottom">Get Handle</Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Bottom">
+                <Button Width="120" Height="23" Command="{Binding GetWindowHandleCommand}" Margin="5" Name="WindowHandleButton" IsEnabled="{Binding Path=CanGetWindowHandle}">Get Handle</Button>
+            <Button Width="120" Height="23" Command="{Binding PlaceInParentCommand}" Margin="5" Name="PlaceInParentButton" IsEnabled="{Binding Path=CanStop}">Place</Button>
+        </StackPanel>
             <StackPanel DockPanel.Dock="Bottom">
                 <CheckBox IsEnabled="False" HorizontalAlignment="Center" IsChecked="{Binding Path=Running}">Running</CheckBox>
                 <Label Content="{Binding Path=WindowHandle}" HorizontalAlignment="Center"></Label>
             </StackPanel>
         <Border Margin="5" BorderBrush="Black" BorderThickness="0.5">
-            <WindowsFormsHost HorizontalAlignment="Left" Height="100" Margin="357,96,0,0" VerticalAlignment="Top" Width="100" />
+            <WindowsFormsHost Margin="5" x:Name="ParentControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            </WindowsFormsHost>
         </Border>
     </DockPanel>
 </UserControl>

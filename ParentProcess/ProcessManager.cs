@@ -1,27 +1,27 @@
 ﻿using ParentProcess.Win32Api;
 using System;
 using System.ComponentModel;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ParentProcess
 {
-    public class ParentedProcessManager : IParentedProcessManager
+    public class ProcessManager : IProcessManager
     {
         private BackgroundWorker _processWorker;
         private BackgroundWorker _shutdownWorker;
         private BackgroundWorker _findMainWindowHandleWorker;
-        
-        public ParentedProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
+
+        public ProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
         {
             if (string.IsNullOrEmpty(processToParentFilename))
                 throw new ArgumentNullException(nameof(processToParentFilename));
             if (!File.Exists(processToParentFilename))
                 throw new FileNotFoundException(
                     $"Unable to parent process for file not found {processToParentFilename}", processToParentFilename);
-            ProcessToParentFilename = processToParentFilename;
+            ProcessFileName = processToParentFilename;
             WindowCaption = windowCaption;
             FriendlyName = friendlyName;
 
@@ -30,15 +30,16 @@ namespace ParentProcess
             InitialiseFindMainWindowHandleBackgroundWorker();
         }
 
-        public string ProcessToParentFilename { get; set; }
+        public string ProcessFileName { get; set; }
         public string WindowCaption { get; set; }
         public string FriendlyName { get; set; }
-        public ParentedProcessInfo ParentedProcessInfo { get; set; }
+        public ProcessInfo ParentedProcessInfo { get; set; }
         public ProcessStartInfo ProcessStartInfo { get; set; }
+        public IntPtr ParentWindowHandle { get; set; }
 
-        public bool IsRunning { 
+        public bool HasExited { 
             get {
-                return (!ParentedProcessInfo?.Process?.HasExited ?? false);
+                return ParentedProcessInfo.Process.HasExited;
             }
             private set { }
         }
@@ -81,12 +82,12 @@ namespace ParentProcess
 
         private void BackgroundStartProcess(object sender, DoWorkEventArgs doWorkEventArgs)
         {
-            ParentedProcessInfo = new ParentedProcessInfo();
+            ParentedProcessInfo = new ProcessInfo();
             if (ProcessStartInfo == null)
             {
                 ParentedProcessInfo.ProcessStartInfo = new ProcessStartInfo
                 {
-                    FileName = ProcessToParentFilename,
+                    FileName = ProcessFileName,
                     WindowStyle = ProcessWindowStyle.Minimized
                     
                 };
@@ -101,12 +102,10 @@ namespace ParentProcess
                 EnableRaisingEvents = true
             };
 
-            ParentedProcessInfo.Process.Exited += ProcessOnExited;
+            ParentedProcessInfo.Process.Exited += OnProcessExitFired;
             var result = ParentedProcessInfo.Process.Start();
             if (result)
             {
-                //GetMainWindowHandle();
-                IsRunning = true;
                 OnProcessStarted();
             }
         }
@@ -145,67 +144,84 @@ namespace ParentProcess
             }
         }
 
-        private void ProcessOnExited(object sender, EventArgs eventArgs)
+        private void OnProcessExitFired(object sender, EventArgs eventArgs)
         {
-            IsRunning = false;
             var senderProcess = sender as Process;
             if(senderProcess != null)
             {
-                if(senderProcess.ExitCode != 0 && senderProcess.ExitCode != -1)
+                if(senderProcess.ExitCode != 0)
                 {
                     OnProcessUnhandledExceptionEvent(new UnhandledExceptionEventArgs(new Exception($"Process exited with exit code {senderProcess.ExitCode}"), true));
                     return;
                 }
             }
-            OnProcessStoppedEvent();
+           // OnProcessStoppedEvent();
         }
 
         private void BackgroundStopProcess(object sender, DoWorkEventArgs doWorkEventArgs)
         {
+
             _processWorker.CancelAsync();
-            if (!ParentedProcessInfo.Process.HasExited)
+
+            try
             {
-                if (ParentedProcessInfo.Process != null)
+                var process = ParentedProcessInfo.Process;
+                if (process != null)
                 {
-                    var processes = Process.GetProcessesByName(FriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
-                    foreach (var process in processes)
+                    process.CloseMainWindow();
+                    process.WaitForExit(750);
+                }
+                if (!process.HasExited)
+                {
+                    if (process != null)
                     {
-                        if (!process.HasExited && !ParentedProcessInfo.Process.HasExited)
+                        var processes = Process.GetProcessesByName(FriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
+                        foreach (var proc in processes)
                         {
-                            if (FindParentProcess.GetParentProcess(process.Id)?.Id ==
-                                ParentedProcessInfo.Process.Id)
+                            if (!proc.HasExited && !ParentedProcessInfo.Process.HasExited)
                             {
-                                try
+                                if (FindParentProcess.GetParentProcess(proc.Id)?.Id ==
+                                    process.Id)
                                 {
-                                    process.Kill();
-                                    process.WaitForExit();
-                                }
-                                catch
-                                {
+                                    try
+                                    {
+                                        proc.Kill();
+                                        proc.WaitForExit();
+                                    }
+                                    catch
+                                    {
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (!ParentedProcessInfo.Process.HasExited)
-                    {
-                        ParentedProcessInfo.Process.Kill();
-                        ParentedProcessInfo.Process.WaitForExit();
+                        if (!process.HasExited)
+                        {
+                            try
+                            {
+                                process.Kill();
+                                process.WaitForExit();
+                            }
+                            catch { }
+                        }
                     }
                 }
+            } catch (Exception ex)
+            {
+
+            } finally
+            {
+                OnProcessStoppedEvent();
             }
         }
 
         public void StartProcess()
         {
-            if (!IsRunning)
-            {
-                _processWorker.RunWorkerAsync();
-            }
+          _processWorker.RunWorkerAsync();
         }
 
         public void StopProcess()
         {
-            if (IsRunning)
+            if (!HasExited)
             {
                 _shutdownWorker.RunWorkerAsync();
             }
@@ -213,10 +229,20 @@ namespace ParentProcess
 
         public void FindMainWindowHandle()
         {
-            if (IsRunning)
+            if (!HasExited)
             {
                 _findMainWindowHandleWorker.RunWorkerAsync();
             }
+        }
+
+        public void PlaceInParent(object parentObject)
+        {
+            HandleRef parent = new HandleRef(parentObject, ParentWindowHandle);
+            var hwndChild = ParentedProcessInfo.Process.MainWindowHandle;
+            HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
+            bool noMessagePump = false;
+            bool showWin32Menu = false;
+            Win32Wrapper.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
         }
 
         public event ProcessStarted ProcessStartedEvent;

@@ -43,7 +43,7 @@ namespace ParentProcess.Win32Api
             return windows;
         }
 
-        private static string ProcessIdForWindow(IntPtr wnd)
+        public static string ProcessIdForWindow(IntPtr wnd)
         {
             uint processId = UInt32.MinValue;
             Win32Wrapper.GetWindowThreadProcessId(wnd, out processId);
