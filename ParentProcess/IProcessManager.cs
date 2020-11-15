@@ -24,5 +24,6 @@ namespace ParentProcess
         event ProcessStopped ProcessStoppedEvent;
         event ProcessMainWindowHandleFound ProcessMainWindowHandleFoundEvent;
         event ProcessUnhandledException ProcessUnhandledExceptionEvent;
+        event ProcessNonResponsive ProcessNonResponsiveEvent;
     }
 }

@@ -41,7 +41,7 @@ namespace ParentProcess.Demo
 
         public void Close()
         {
-            if (_manager != null && _manager.HasExited)
+            if (_manager != null && !_manager.HasExited)
             {
                 _manager.StopProcess();
             }
@@ -50,11 +50,10 @@ namespace ParentProcess.Demo
         public void Start()
         {
             if (_manager != null) { 
-                if (!_manager.HasExited)
-                {
+                
                     _manager.ProcessFileName = PathToExecutable;
                     _manager.StartProcess();
-                }
+                
             }
         }
 
@@ -76,7 +75,7 @@ namespace ParentProcess.Demo
         {
             if (_manager != null)
             {
-                if (_manager.HasExited)
+                if (!_manager.HasExited)
                 {
                     _manager.FindMainWindowHandle();
                 }

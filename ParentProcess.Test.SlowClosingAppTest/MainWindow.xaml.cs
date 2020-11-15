@@ -29,7 +29,7 @@ namespace ParentProcess.Test.SlowClosingAppTest
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var random = new Random();
-            var howSlow = 2500 + random.Next(0, 1000);
+            var howSlow = 30000 + random.Next(0, 15000);
             Thread.Sleep(howSlow);
         }
     }

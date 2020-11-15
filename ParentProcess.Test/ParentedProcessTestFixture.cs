@@ -30,8 +30,6 @@ namespace ParentProcess.Test
             Assert.Throws<FileNotFoundException>(() => { new ProcessManager(@"C:\Foo\Bar.exe", null, null); });
         }
 
-        private Exception _unhandledException;
-
         [TestCase]
         public void ParentProcessManager_WithFaultingApplication_FiresUnhandledExceptionEvent()
         {
@@ -52,15 +50,75 @@ namespace ParentProcess.Test
             Assert.That(manager.HasExited, Is.True);
         }
 
-        private bool _wasStopped = false;
+        [TestCase]
+        public void ParentProcessManager_WithNonResponsiveApplication_FiresNonResponsiveEvent()
+        {
+            // Arrange
+            _nonResponsive = false;
+            var path = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+            var finalPath = Path.Combine(path, @"..\..\..\ParentProcess.Test.NonResponsiveAppTest\bin\Debug\ParentProcess.Test.NonResponsiveAppTest.exe");
+            
+            var manager = new ProcessManager(finalPath, "NonResponsive process", "NonResponsive process");
+            manager.ProcessNonResponsiveEvent += Manager_ProcessNonResponsiveEvent;
+
+            // Act
+            manager.StartProcess();
+
+            Thread.Sleep(15000);
+
+            manager.StopProcess();
+
+            Thread.Sleep(2000);
+
+            // Assert
+
+            Assert.That(_nonResponsive, Is.True);
+        }
+
+        [TestCase]
+        public void ParentProcessManager_WithSlowClosingApplication_ClosesApplication()
+        {
+            // Arrange
+            _wasStopped = false;
+            var path = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+            var finalPath = Path.Combine(path, @"..\..\..\ParentProcess.Test.SlowClosingAppTest\bin\Debug\ParentProcess.Test.SlowClosingAppTest.exe");
+
+            var manager = new ProcessManager(finalPath, "Slow closing process", "Slow closing process");
+            manager.ProcessStoppedEvent += Manager_ProcessStoppedEvent;
+
+            // Act
+            manager.StartProcess();
+
+            Thread.Sleep(1000);
+
+            manager.StopProcess();
+
+            while(!manager.ParentedProcessInfo.Process.HasExited)
+            {
+                Task.Delay(1000);
+            }
+
+            Thread.Sleep(2000);
+
+            // Assert
+            Assert.That(_wasStopped, Is.True);
+        }
+
+        private void Manager_ProcessNonResponsiveEvent(EventArgs args)
+        {
+            _nonResponsive = true;
+        }
 
         [TestCase]
         public void ParentProcessManager_WhenStoppingProcess_FiresStoppedEventAndProcessIsNoLongerRunning()
         {
             // Arrange
+            _wasStopped = false;
+            _unhandledException = null;
             var path = @"C:\Windows\System32\Notepad.exe";
             var manager = new ProcessManager(path, "Notepad will be killed", "Notepad will be killed");
             manager.ProcessStoppedEvent += Manager_ProcessStoppedEvent;
+            manager.ProcessUnhandledExceptionEvent += Manager_ProcessUnhandledExceptionEvent;
 
             // Act
             manager.StartProcess();
@@ -76,6 +134,7 @@ namespace ParentProcess.Test
             Assert.That(_wasStopped, Is.True);
             Assert.That(manager.HasExited, Is.True);
             Assert.That(manager.ParentedProcessInfo.Process.HasExited, Is.True);
+            Assert.That(_unhandledException, Is.Null);
         }
 
         private void Manager_ProcessStoppedEvent(EventArgs args)
@@ -108,6 +167,9 @@ namespace ParentProcess.Test
             manager.StopProcess();
         }
 
+        private bool _wasStopped = false;
+        private bool _nonResponsive = false;
+        private Exception _unhandledException;
         private string _mainWindowHandle = string.Empty;
         private ProcessManager _manager;
 
@@ -145,6 +207,8 @@ namespace ParentProcess.Test
         public void ParentProcessManager_WithApplicationKilled_FiresUnhandledExceptionEvent()
         {
             // Arrange
+            _wasStopped = false;
+            _unhandledException = null;
             var path = @"C:\Windows\System32\Notepad.exe";
             var manager = new ProcessManager(path, "Notepad", "Notepad");
             manager.ProcessUnhandledExceptionEvent += Manager_ProcessUnhandledExceptionEvent;
@@ -160,19 +224,5 @@ namespace ParentProcess.Test
             Assert.That(manager.HasExited, Is.True);
         }
 
-        //[TestCase]
-        //public async Task TimerTest()
-        //{
-        //    await WpfContext.Run(() =>
-        //    {
-        //        _value = 0;
-        //        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
-        //        timer.Tick += IncrementValue;
-        //        timer.Start();
-
-        //        await Task.Delay(15);
-        //        Assert.AreNotEqual(0, _value);
-        //    });
-        //}
     }
 }

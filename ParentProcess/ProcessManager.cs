@@ -5,14 +5,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ParentProcess
 {
     public class ProcessManager : IProcessManager
     {
-        private BackgroundWorker _processWorker;
+        private BackgroundWorker _processStartWorker;
         private BackgroundWorker _shutdownWorker;
         private BackgroundWorker _findMainWindowHandleWorker;
+        private BackgroundWorker _nonResponsiveWorker;
 
         public ProcessManager(string processToParentFilename, string windowCaption, string friendlyName)
         {
@@ -25,9 +27,10 @@ namespace ParentProcess
             WindowCaption = windowCaption;
             FriendlyName = friendlyName;
 
-            InitialiseProcessBackgroundWorker();
+            InitialiseProcessStartBackgroundWorker();
             InitialiseProcessShutdownBackgroundWorker();
             InitialiseFindMainWindowHandleBackgroundWorker();
+            InitialiseProcessNonResponsiveBackgroundWorker();
         }
 
         public string ProcessFileName { get; set; }
@@ -39,18 +42,31 @@ namespace ParentProcess
 
         public bool HasExited { 
             get {
-                return ParentedProcessInfo.Process.HasExited;
+                return ParentedProcessInfo?.Process.HasExited ?? false;
             }
             private set { }
         }
 
-        private void InitialiseProcessBackgroundWorker()
+        private void InitialiseProcessStartBackgroundWorker()
         {
-            _processWorker = new BackgroundWorker
+            _processStartWorker = new BackgroundWorker
             {
                 WorkerSupportsCancellation = true
             };
-            _processWorker.DoWork += BackgroundStartProcess;
+            _processStartWorker.DoWork += BackgroundStartProcess;
+            _processStartWorker.RunWorkerCompleted += ProcessStartBackgroundWorkerCompleted;
+        }
+
+        private void ProcessStartBackgroundWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e?.Result != null)
+            {
+                var result = (Boolean)e.Result;
+                if (result)
+                {
+                    _nonResponsiveWorker.RunWorkerAsync();
+                }
+            }
         }
 
         private void InitialiseProcessShutdownBackgroundWorker()
@@ -66,6 +82,25 @@ namespace ParentProcess
             _findMainWindowHandleWorker.WorkerSupportsCancellation = false;
             _findMainWindowHandleWorker.DoWork += BackgroundFindMainWindowHandle;
             _findMainWindowHandleWorker.RunWorkerCompleted += BackgroundFindMainWindowHandleCompleted;
+        }
+
+        private void InitialiseProcessNonResponsiveBackgroundWorker()
+        {
+            _nonResponsiveWorker = new BackgroundWorker();
+            _nonResponsiveWorker.WorkerSupportsCancellation = true;
+            _nonResponsiveWorker.DoWork += BackgroundMonitorNonResponsive;
+        }
+
+        private void BackgroundMonitorNonResponsive(object sender, DoWorkEventArgs doWorkEventArgs)
+        {
+            while(!_nonResponsiveWorker.CancellationPending)
+            {
+                Task.Delay(1500);
+                if(!ParentedProcessInfo.Process.Responding)
+                {
+                    OnProcessNonResponsiveEvent();
+                }
+            }
         }
 
         private void BackgroundFindMainWindowHandleCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -87,8 +122,7 @@ namespace ParentProcess
             {
                 ParentedProcessInfo.ProcessStartInfo = new ProcessStartInfo
                 {
-                    FileName = ProcessFileName,
-                    WindowStyle = ProcessWindowStyle.Minimized
+                    FileName = ProcessFileName
                     
                 };
             }
@@ -106,6 +140,7 @@ namespace ParentProcess
             var result = ParentedProcessInfo.Process.Start();
             if (result)
             {
+                doWorkEventArgs.Result = result;
                 OnProcessStarted();
             }
         }
@@ -160,16 +195,16 @@ namespace ParentProcess
 
         private void BackgroundStopProcess(object sender, DoWorkEventArgs doWorkEventArgs)
         {
-
-            _processWorker.CancelAsync();
-
             try
             {
+                _processStartWorker.CancelAsync();
+                _nonResponsiveWorker.CancelAsync();
+
                 var process = ParentedProcessInfo.Process;
                 if (process != null)
                 {
                     process.CloseMainWindow();
-                    process.WaitForExit(750);
+                    process.WaitForExit();
                 }
                 if (!process.HasExited)
                 {
@@ -207,6 +242,16 @@ namespace ParentProcess
                 }
             } catch (Exception ex)
             {
+                try
+                {
+                    var process = ParentedProcessInfo.Process;
+                    if (!process.HasExited)
+                    {
+                        process.Kill();
+                        process.WaitForExit();
+                    }
+                }
+                catch { }
 
             } finally
             {
@@ -216,7 +261,7 @@ namespace ParentProcess
 
         public void StartProcess()
         {
-          _processWorker.RunWorkerAsync();
+          _processStartWorker.RunWorkerAsync();
         }
 
         public void StopProcess()
@@ -249,6 +294,7 @@ namespace ParentProcess
         public event ProcessStopped ProcessStoppedEvent;
         public event ProcessMainWindowHandleFound ProcessMainWindowHandleFoundEvent;
         public event ProcessUnhandledException ProcessUnhandledExceptionEvent;
+        public event ProcessNonResponsive ProcessNonResponsiveEvent;
 
         protected virtual void OnProcessStarted()
         {
@@ -258,6 +304,11 @@ namespace ParentProcess
         protected virtual void OnProcessStoppedEvent()
         {
             ProcessStoppedEvent?.Invoke(EventArgs.Empty);
+        }
+
+        protected virtual void OnProcessNonResponsiveEvent()
+        {
+            ProcessNonResponsiveEvent?.Invoke(EventArgs.Empty);
         }
 
         protected virtual void OnProcessMainWindowHandleFoundEvent()

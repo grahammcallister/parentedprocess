@@ -10,5 +10,5 @@ namespace ParentProcess
 
     public delegate void ProcessUnhandledException(object sender, UnhandledExceptionEventArgs args);
 
-    public delegate void WatchdogEvent(EventArgs args);
+    public delegate void ProcessNonResponsive(EventArgs args);
 }
