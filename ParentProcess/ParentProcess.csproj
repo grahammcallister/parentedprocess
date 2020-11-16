@@ -54,6 +54,7 @@
     <Compile Include="Win32Api\EnumerateProcessWindows.cs" />
     <Compile Include="Win32Api\WindowCaptionText.cs" />
     <Compile Include="Win32Api\Win32Wrapper.cs" />
+    <Compile Include="Win32Api\WindowPlacement.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

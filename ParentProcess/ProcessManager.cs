@@ -195,67 +195,72 @@ namespace ParentProcess
 
         private void BackgroundStopProcess(object sender, DoWorkEventArgs doWorkEventArgs)
         {
-            try
-            {
-                _processStartWorker.CancelAsync();
-                _nonResponsiveWorker.CancelAsync();
-
-                var process = ParentedProcessInfo.Process;
-                if (process != null)
-                {
-                    process.CloseMainWindow();
-                    process.WaitForExit();
-                }
-                if (!process.HasExited)
-                {
-                    if (process != null)
-                    {
-                        var processes = Process.GetProcessesByName(FriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
-                        foreach (var proc in processes)
-                        {
-                            if (!proc.HasExited && !ParentedProcessInfo.Process.HasExited)
-                            {
-                                if (FindParentProcess.GetParentProcess(proc.Id)?.Id ==
-                                    process.Id)
-                                {
-                                    try
-                                    {
-                                        proc.Kill();
-                                        proc.WaitForExit();
-                                    }
-                                    catch
-                                    {
-                                    }
-                                }
-                            }
-                        }
-                        if (!process.HasExited)
-                        {
-                            try
-                            {
-                                process.Kill();
-                                process.WaitForExit();
-                            }
-                            catch { }
-                        }
-                    }
-                }
-            } catch (Exception ex)
+            if (ParentedProcessInfo != null)
             {
                 try
                 {
+                    _processStartWorker.CancelAsync();
+                    _nonResponsiveWorker.CancelAsync();
+
                     var process = ParentedProcessInfo.Process;
-                    if (!process.HasExited)
+                    if (process != null)
                     {
-                        process.Kill();
+                        process.CloseMainWindow();
                         process.WaitForExit();
                     }
+                    if (!process.HasExited)
+                    {
+                        if (process != null)
+                        {
+                            var processes = Process.GetProcessesByName(FriendlyName).Where(p => p.Id != ParentedProcessInfo.Process.Id);
+                            foreach (var proc in processes)
+                            {
+                                if (!proc.HasExited && !ParentedProcessInfo.Process.HasExited)
+                                {
+                                    if (FindParentProcess.GetParentProcess(proc.Id)?.Id ==
+                                        process.Id)
+                                    {
+                                        try
+                                        {
+                                            proc.Kill();
+                                            proc.WaitForExit();
+                                        }
+                                        catch
+                                        {
+                                        }
+                                    }
+                                }
+                            }
+                            if (!process.HasExited)
+                            {
+                                try
+                                {
+                                    process.Kill();
+                                    process.WaitForExit();
+                                }
+                                catch { }
+                            }
+                        }
+                    }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        var process = ParentedProcessInfo.Process;
+                        if (!process.HasExited)
+                        {
+                            process.Kill();
+                            process.WaitForExit();
+                        }
+                    }
+                    catch { }
 
-            } finally
-            {
-                OnProcessStoppedEvent();
+                }
+                finally
+                {
+                    OnProcessStoppedEvent();
+                }
             }
         }
 
@@ -287,7 +292,7 @@ namespace ParentProcess
             HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
             bool noMessagePump = false;
             bool showWin32Menu = false;
-            Win32Wrapper.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
+            WindowPlacement.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
         }
 
         public event ProcessStarted ProcessStartedEvent;

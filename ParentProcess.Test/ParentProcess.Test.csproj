@@ -60,6 +60,14 @@
       <Project>{e5862374-e33a-4ab8-9913-f9b79cf79c9d}</Project>
       <Name>ParentProcess.Test.FaultingAppTest</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ParentProcess.Test.NonResponsiveAppTest\ParentProcess.Test.NonResponsiveAppTest.csproj">
+      <Project>{ffbde99a-19cf-4c1a-90ff-45328b633a79}</Project>
+      <Name>ParentProcess.Test.NonResponsiveAppTest</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ParentProcess.Test.SlowClosingAppTest\ParentProcess.Test.SlowClosingAppTest.csproj">
+      <Project>{19a4a7b8-b2f5-4bb3-a929-0439678cb606}</Project>
+      <Name>ParentProcess.Test.SlowClosingAppTest</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ParentProcess\ParentProcess.csproj">
       <Project>{3eef4f31-6a8d-470a-a18c-11bdb3364dcb}</Project>
       <Name>ParentProcess</Name>
