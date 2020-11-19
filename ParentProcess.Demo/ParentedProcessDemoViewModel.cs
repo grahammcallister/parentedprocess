@@ -41,7 +41,7 @@ namespace ParentProcess.Demo
 
         public void Close()
         {
-            if (_manager != null && !_manager.HasExited)
+            if (_manager != null)
             {
                 _manager.StopProcess();
             }
@@ -66,6 +66,20 @@ namespace ParentProcess.Demo
                 if (ParentedProcessManager.ParentWindowHandle != IntPtr.Zero)
                 {
                     ParentedProcessManager.PlaceInParent(control);
+                }
+
+            }
+        }
+
+        public void Resize()
+        {
+            if (ParentControl != null)
+            {
+                var control = ParentControl as System.Windows.Forms.Integration.WindowsFormsHost;
+                ParentedProcessManager.ParentWindowHandle = control.Handle;
+                if (ParentedProcessManager.ParentWindowHandle != IntPtr.Zero)
+                {
+                    ParentedProcessManager.Resize(control);
                 }
 
             }

@@ -35,5 +35,15 @@ namespace ParentProcess.Demo
         private ParentedProcessDemoViewModel _viewmodel;
 
         public ParentedProcessDemoViewModel ViewModel { get => _viewmodel;  }
+
+        private void ParentControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ViewModel.Resize();
+        }
+
+        private void ParentControl_LayoutUpdated(object sender, EventArgs e)
+        {
+            ViewModel.Resize();
+        }
     }
 }

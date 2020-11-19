@@ -271,10 +271,9 @@ namespace ParentProcess
 
         public void StopProcess()
         {
-            if (!HasExited)
-            {
-                _shutdownWorker.RunWorkerAsync();
-            }
+            _shutdownWorker.RunWorkerAsync();
+            _placed = false;
+            _resizing = false;
         }
 
         public void FindMainWindowHandle()
@@ -287,12 +286,37 @@ namespace ParentProcess
 
         public void PlaceInParent(object parentObject)
         {
-            HandleRef parent = new HandleRef(parentObject, ParentWindowHandle);
-            var hwndChild = ParentedProcessInfo.Process.MainWindowHandle;
-            HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
-            bool noMessagePump = false;
-            bool showWin32Menu = false;
-            WindowPlacement.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
+            if (!_placed && !_resizing && !HasExited)
+            {
+                HandleRef parent = new HandleRef(parentObject, ParentWindowHandle);
+                var hwndChild = ParentedProcessInfo.Process.MainWindowHandle;
+                HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
+                bool noMessagePump = false;
+                bool showWin32Menu = false;
+                WindowPlacement.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
+                _placed = true;
+                Resize(parentObject);
+            }
+        }
+
+        private bool _placed = false;
+        private bool _resizing = false;
+
+        public void Resize(object parentObject)
+        {
+            if (_placed && !_resizing)
+            {
+                _resizing = true;
+                HandleRef parent = new HandleRef(parentObject, ParentWindowHandle);
+                var hwndChild = ParentedProcessInfo.Process.MainWindowHandle;
+                if (hwndChild != IntPtr.Zero)
+                {
+                    HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
+                    bool noMessagePump = false;
+                    WindowPlacement.UpdateChildWindowPosition(parent, child, noMessagePump);
+                }
+                _resizing = false;
+            }
         }
 
         public event ProcessStarted ProcessStartedEvent;

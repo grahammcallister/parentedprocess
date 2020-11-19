@@ -30,5 +30,10 @@ namespace ParentProcess.Win32Api
             return !noMessagePump ? new Rectangle(0, 0, lpRect.Width, lpRect.Height) : new Rectangle(-4, -Win32Wrapper.GetSystemMetrics(4) - 4, lpRect.Width + 10, lpRect.Height + 12);
         }
 
+        public static void UpdateChildWindowPosition(HandleRef parent, HandleRef child, bool noMessagePump)
+        {
+            Rectangle clientRect = GetClientRectangle(parent, noMessagePump);
+            Win32Wrapper.SetWindowPos(child, 0, clientRect.X, clientRect.Y, clientRect.Width, clientRect.Height, 20);
+        }
     }
 }

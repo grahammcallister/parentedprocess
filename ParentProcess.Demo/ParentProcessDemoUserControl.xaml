@@ -23,7 +23,7 @@
                 <Label Content="{Binding Path=WindowHandle}" HorizontalAlignment="Center"></Label>
             </StackPanel>
         <Border Margin="5" BorderBrush="Black" BorderThickness="0.5">
-            <WindowsFormsHost Margin="5" x:Name="ParentControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <WindowsFormsHost Margin="5" x:Name="ParentControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SizeChanged="ParentControl_SizeChanged" LayoutUpdated="ParentControl_LayoutUpdated">
             </WindowsFormsHost>
         </Border>
     </DockPanel>
