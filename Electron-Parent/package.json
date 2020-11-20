@@ -1,0 +1,17 @@
+{
+  "name": "electron-parent",
+  "version": "1.0.0",
+  "description": "Parent process demo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Graham",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^11.0.2"
+  },
+  "dependencies": {
+    "ps-node": "^0.1.6"
+  }
+}
