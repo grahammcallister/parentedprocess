@@ -91,7 +91,7 @@ namespace ParentProcess.Demo
             {
                 if (!_manager.HasExited)
                 {
-                    _manager.FindMainWindowHandle();
+                    _manager.FindChildMainWindowHandle();
                 }
             }
         }
@@ -170,7 +170,7 @@ namespace ParentProcess.Demo
 
         private void ManagerOnProcessMainWindowHandleFoundEvent(EventArgs args)
         {
-            WindowHandle = _manager.ParentedProcessInfo.MainWindowHandle;
+            WindowHandle = _manager.ParentedProcessInfo.ChildMainWindowHandle;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

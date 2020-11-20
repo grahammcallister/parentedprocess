@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 
@@ -9,8 +10,8 @@ namespace ParentProcess
     {
         void StartProcess();
         void StopProcess();
-        void FindMainWindowHandle();
-        void PlaceInParent(object parent);
+        void FindChildMainWindowHandle();
+        void PlaceInParent(object parent, Rectangle clientRect = new Rectangle());
 
         ProcessInfo ParentedProcessInfo { get; }
 

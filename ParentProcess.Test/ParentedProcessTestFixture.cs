@@ -184,7 +184,7 @@ namespace ParentProcess.Test
             _manager.StartProcess();
             _manager.ProcessMainWindowHandleFoundEvent += Manager_ProcessMainWindowHandleFoundEvent;
             Thread.Sleep(2000);
-            _manager.FindMainWindowHandle();
+            _manager.FindChildMainWindowHandle();
             Thread.Sleep(2000);
 
             // Assert
@@ -200,7 +200,7 @@ namespace ParentProcess.Test
 
         private void Manager_ProcessMainWindowHandleFoundEvent(EventArgs args)
         {
-            _mainWindowHandle = _manager.ParentedProcessInfo.MainWindowHandle.ToString();
+            _mainWindowHandle = _manager.ParentedProcessInfo.ChildMainWindowHandle.ToString();
         }
 
         [TestCase]

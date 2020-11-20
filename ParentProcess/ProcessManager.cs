@@ -2,9 +2,11 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ParentProcess
@@ -105,12 +107,16 @@ namespace ParentProcess
 
         private void BackgroundFindMainWindowHandleCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
+            Debug.WriteLine("BackgroundFindMainWindowHandleCompleted");
             if (e?.Result != null)
             {
                 var result = (Boolean)e.Result;
                 if (result)
                 {
                     OnProcessMainWindowHandleFoundEvent();
+                } else
+                {
+                    StopProcess();
                 }
             }
         }
@@ -122,8 +128,8 @@ namespace ParentProcess
             {
                 ParentedProcessInfo.ProcessStartInfo = new ProcessStartInfo
                 {
-                    FileName = ProcessFileName
-                    
+                    FileName = ProcessFileName,
+                    WindowStyle = ProcessWindowStyle.Normal
                 };
             }
             else
@@ -147,21 +153,36 @@ namespace ParentProcess
 
         private void BackgroundFindMainWindowHandle(object sender, DoWorkEventArgs doWorkEventArgs)
         {
+            Debug.WriteLine("BackgroundFindMainWindowHandle");
             if (ParentedProcessInfo.Process.MainWindowHandle != IntPtr.Zero)
             {
-                ParentedProcessInfo.MainWindowHandle = ParentedProcessInfo.Process.MainWindowHandle;
+                ParentedProcessInfo.ChildMainWindowHandle = ParentedProcessInfo.Process.MainWindowHandle;
                 doWorkEventArgs.Result = true;
+                Debug.WriteLine("BackgroundFindMainWindowHandle ------ found");
                 return;
             }
             else
             {
-                while (ParentedProcessInfo.MainWindowHandle == IntPtr.Zero && !ParentedProcessInfo.Process.HasExited)
-                {
-                    var processes = FindParentProcess.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
-                    if (processes.Count() == 1)
+                ParentedProcessInfo.Process.Refresh();
+                ParentedProcessInfo.Process.WaitForInputIdle();
+                if(ParentedProcessInfo.Process.MainWindowHandle != IntPtr.Zero)
                     {
-                        processes = Process.GetProcessesByName(FriendlyName);
+                        ParentedProcessInfo.ChildMainWindowHandle = ParentedProcessInfo.Process.MainWindowHandle;
+                        doWorkEventArgs.Result = true;
+                        Debug.WriteLine("BackgroundFindMainWindowHandle ------ found after refresh");
+                        return;
                     }
+                        Debug.WriteLine("BackgroundFindMainWindowHandle ------ NOT found");
+                int retry = 0;
+                while (ParentedProcessInfo.ChildMainWindowHandle == IntPtr.Zero && !ParentedProcessInfo.Process.HasExited)
+                {
+                    Thread.Sleep(1000);
+                    Debug.WriteLine("BackgroundFindMainWindowHandle ------ LOOKING");
+                    var processes = FindParentProcess.FindProcessesSpawnedBy((UInt32)ParentedProcessInfo.Process.Id);
+                    //if (processes.Count() == 1)
+                    //{
+                    //    processes = Process.GetProcessesByName(FriendlyName);
+                    //}
                     var processesWithWindows = processes.Where(x => x.MainWindowHandle != IntPtr.Zero);
                     foreach (var process in processesWithWindows)
                     {
@@ -169,14 +190,21 @@ namespace ParentProcess
                         if (parent != null && parent.Id == ParentedProcessInfo.Process.Id)
                         {
                             // Found you!
-                            ParentedProcessInfo.MainWindowHandle = process.MainWindowHandle;
+                            ParentedProcessInfo.ChildMainWindowHandle = process.MainWindowHandle;
                             doWorkEventArgs.Result = true;
                             return;
                         }
                     }
-
+                    retry++;
+                    if(retry > 10)
+                    {
+                        Debug.WriteLine("BackgroundFindMainWindowHandle ------ RETRY > 10");
+                        break;
+                    }
                 }
             }
+            Debug.WriteLine("BackgroundFindMainWindowHandle ------ LOOKED BUT NOT FOUND");
+            doWorkEventArgs.Result = false;
         }
 
         private void OnProcessExitFired(object sender, EventArgs eventArgs)
@@ -276,7 +304,7 @@ namespace ParentProcess
             _resizing = false;
         }
 
-        public void FindMainWindowHandle()
+        public void FindChildMainWindowHandle()
         {
             if (!HasExited)
             {
@@ -284,7 +312,7 @@ namespace ParentProcess
             }
         }
 
-        public void PlaceInParent(object parentObject)
+        public void PlaceInParent(object parentObject, Rectangle clientRect = new Rectangle())
         {
             if (!_placed && !_resizing && !HasExited)
             {
@@ -293,7 +321,13 @@ namespace ParentProcess
                 HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
                 bool noMessagePump = false;
                 bool showWin32Menu = false;
-                WindowPlacement.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
+                if (clientRect == Rectangle.Empty)
+                {
+                    WindowPlacement.PlaceChildWindowInParent(parent, child, showWin32Menu, noMessagePump);
+                } else
+                {
+                    WindowPlacement.PlaceChildWindowInParent(parent, child, clientRect, showWin32Menu);
+                }
                 _placed = true;
                 Resize(parentObject);
             }
@@ -302,7 +336,7 @@ namespace ParentProcess
         private bool _placed = false;
         private bool _resizing = false;
 
-        public void Resize(object parentObject)
+        public void Resize(object parentObject, Rectangle clientRect = new Rectangle())
         {
             if (_placed && !_resizing)
             {
@@ -313,7 +347,13 @@ namespace ParentProcess
                 {
                     HandleRef child = new HandleRef(ParentedProcessInfo.Process, hwndChild);
                     bool noMessagePump = false;
-                    WindowPlacement.UpdateChildWindowPosition(parent, child, noMessagePump);
+                    if (clientRect == Rectangle.Empty)
+                    {
+                        WindowPlacement.UpdateChildWindowPosition(parent, child, noMessagePump);
+                    } else
+                    {
+                        WindowPlacement.UpdateChildWindowPosition(clientRect, child);
+                    }
                 }
                 _resizing = false;
             }
