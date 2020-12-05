@@ -97,11 +97,31 @@ namespace ParentProcess
         {
             while(!_nonResponsiveWorker.CancellationPending)
             {
-                Task.Delay(1500);
-                if(!ParentedProcessInfo.Process.Responding)
+                // See https://stackoverflow.com/questions/7402146/cpu-friendly-infinite-loop
+
+                // Create a IPC wait handle with a unique identifier.
+                bool createdNew;
+                var waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, Guid.NewGuid().ToString(), out createdNew);
+                var signaled = false;
+
+                // If the handle was already there, inform the other process to exit itself.
+                // Afterwards we'll also die.
+                if (!createdNew)
                 {
-                    OnProcessNonResponsiveEvent();
+                    waitHandle.Set();
+                    return;
                 }
+
+                // Wait if someone tells us to die or do every five seconds something else.
+                do
+                {
+                    signaled = waitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                    if (!ParentedProcessInfo.Process.Responding)
+                    {
+                        OnProcessNonResponsiveEvent();
+                    }
+                } while (!signaled);
+                
             }
         }
 

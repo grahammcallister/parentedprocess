@@ -40,11 +40,27 @@ namespace Parent
             ParseAndHandleStartupArgs(args);
             Program program = new Program();
 
-            // Main loop
-            while (true)
+            // See https://stackoverflow.com/questions/7402146/cpu-friendly-infinite-loop
+
+            // Create a IPC wait handle with a unique identifier.
+            bool createdNew;
+            var waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, "CF2D4313-33DE-489D-9721-6AFF69841DEA", out createdNew);
+            var signaled = false;
+
+            // If the handle was already there, inform the other process to exit itself.
+            // Afterwards we'll also die.
+            if (!createdNew)
             {
-                Task.Delay(1000);
+                waitHandle.Set();
+                return;
             }
+
+            // Wait if someone tells us to die or do every five seconds something else.
+            do
+            {
+                signaled = waitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                // ToDo: Something else if desired.
+            } while (!signaled);
         }
 
         private static void ParseAndHandleStartupArgs(string[] args)
@@ -78,10 +94,27 @@ namespace Parent
                 Debug.WriteLine($"Parent PipeServer Open | ------------------- {ServerPipeName} ");
                 _pipeServer.Open();
 
-                while (true)
+                // See https://stackoverflow.com/questions/7402146/cpu-friendly-infinite-loop
+
+                // Create a IPC wait handle with a unique identifier.
+                bool createdNew;
+                var waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, Guid.NewGuid().ToString(), out createdNew);
+                var signaled = false;
+
+                // If the handle was already there, inform the other process to exit itself.
+                // Afterwards we'll also die.
+                if (!createdNew)
                 {
-                    Task.Delay(1000);
+                    waitHandle.Set();
+                    return;
                 }
+
+                // Wait if someone tells us to die or do every five seconds something else.
+                do
+                {
+                    signaled = waitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                    // ToDo: Something else if desired.
+                } while (!signaled);
             } catch (Exception ex)
             {
                 DebugMessage(ex, $"Parent PipeServer {MethodBase.GetCurrentMethod()}");
@@ -136,10 +169,27 @@ namespace Parent
                 
                 _pipeClient.Open();
 
-                while (true)
+                // See https://stackoverflow.com/questions/7402146/cpu-friendly-infinite-loop
+
+                // Create a IPC wait handle with a unique identifier.
+                bool createdNew;
+                var waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, Guid.NewGuid().ToString(), out createdNew);
+                var signaled = false;
+
+                // If the handle was already there, inform the other process to exit itself.
+                // Afterwards we'll also die.
+                if (!createdNew)
                 {
-                    Task.Delay(1000);
+                    waitHandle.Set();
+                    return;
                 }
+
+                // Wait if someone tells us to die or do every five seconds something else.
+                do
+                {
+                    signaled = waitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                    // ToDo: Something else if desired.
+                } while (!signaled);
             }
             catch (Exception ex)
             {
@@ -196,10 +246,27 @@ namespace Parent
                 Debug.WriteLine($"Parent ProcessManagerWorker_DoWork | Start Process ---------------------------------------");
                 _managedProcess.StartProcess();
 
-                while (true)
+                // See https://stackoverflow.com/questions/7402146/cpu-friendly-infinite-loop
+
+                // Create a IPC wait handle with a unique identifier.
+                bool createdNew;
+                var waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, Guid.NewGuid().ToString(), out createdNew);
+                var signaled = false;
+
+                // If the handle was already there, inform the other process to exit itself.
+                // Afterwards we'll also die.
+                if (!createdNew)
                 {
-                    Task.Delay(1000);
+                    waitHandle.Set();
+                    return;
                 }
+
+                // Wait if someone tells us to die or do every five seconds something else.
+                do
+                {
+                    signaled = waitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                    // ToDo: Something else if desired.
+                } while (!signaled);
             } catch (Exception ex)
             {
                 DebugMessage(ex, $"Parent {MethodBase.GetCurrentMethod()}");
