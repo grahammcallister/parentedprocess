@@ -9,7 +9,7 @@
   "author": "Graham",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^11.0.2"
+    "electron": "^13.6.6"
   },
   "dependencies": {
     "ps-node": "^0.1.6"
